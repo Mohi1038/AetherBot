@@ -37,6 +37,19 @@ const StudyTime = {
       console.error('Get error:', error);
       throw error;
     }
+  },
+
+  getLeaderboard: async (guildId, limit = 10) => {
+    try {
+      const result = await db.query(
+        'SELECT * FROM user_study_time WHERE guild_id = $1 ORDER BY total_minutes DESC LIMIT $2',
+        [guildId, limit]
+      );
+      return result.rows;
+    } catch (error) {
+      console.error('GetLeaderboard error:', error);
+      throw error;
+    }
   }
 };
 

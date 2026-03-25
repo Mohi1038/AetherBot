@@ -1,24 +1,25 @@
 const { createCanvas, loadImage, registerFont } = require('canvas');
 const path = require('path');
 
-// Registering a more modern font
-// For example, let's use a common system font that looks good.
-// You can replace 'Helvetica' with any font installed on your system or provide a path to a .ttf file.
-// registerFont(path.join(__dirname, '../assets/fonts/Helvetica.ttf'), { family: 'Helvetica' });
-const FONT_FAMILY_BOLD = 'bold 24px Helvetica, Arial, sans-serif';
-const FONT_FAMILY_REGULAR = '20px Helvetica, Arial, sans-serif';
-const FONT_FAMILY_SMALL = '16px Helvetica, Arial, sans-serif';
+const COLORS = {
+  bg: '#0F111A',
+  cardBg: '#1A1D2E',
+  accent: '#7289DA',
+  text: '#FFFFFF',
+  textSecondary: '#949BA4',
+  online: '#43B581',
+  idle: '#FAA61A',
+  dnd: '#F04747',
+  offline: '#747F8D'
+};
 
 function formatTime(totalMinutes) {
-  if (totalMinutes === undefined || totalMinutes === null) {
-    return '0h 0m';
-  }
+  if (!totalMinutes) return '0h 0m';
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   return `${hours}h ${minutes}m`;
 }
 
-// Helper to draw a rounded image
 function drawRoundedImage(ctx, image, x, y, width, height, radius) {
     ctx.save();
     ctx.beginPath();
@@ -37,18 +38,15 @@ function drawRoundedImage(ctx, image, x, y, width, height, radius) {
     ctx.restore();
 }
 
-// Helper for wrapping text
 function wrapText(context, text, x, y, maxWidth, lineHeight) {
-    const words = text.split(' ');
+    const words = String(text).split(' ');
     let line = '';
-    let testLine = '';
     let lineCount = 0;
 
     for (let n = 0; n < words.length; n++) {
-        testLine = line + words[n] + ' ';
-        const metrics = context.measureText(testLine);
-        const testWidth = metrics.width;
-        if (testWidth > maxWidth && n > 0) {
+        let testLine = line + words[n] + ' ';
+        let metrics = context.measureText(testLine);
+        if (metrics.width > maxWidth && n > 0) {
             context.fillText(line, x, y);
             line = words[n] + ' ';
             y += lineHeight;
@@ -61,133 +59,231 @@ function wrapText(context, text, x, y, maxWidth, lineHeight) {
     return lineCount + 1;
 }
 
-async function generateProfileCard(user, member, userData, studyData) {
-  const width = 800;
-  const height = 400;
+async function generateProfileCard(user, member, userData, studyData, levelData, economyData) {
+  const width = 850; // Slightly wider
+  const height = 500; // Slightly taller
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Create a gradient background
+  // Background with subtle pattern/gradient
   const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, '#23272A');
-  gradient.addColorStop(1, '#2C2F33');
+  gradient.addColorStop(0, COLORS.bg);
+  gradient.addColorStop(1, '#1A1C2C');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
 
-  // Card background
-  ctx.fillStyle = '#1c1e21';
-  ctx.roundRect(20, 20, width - 40, height - 40, 20);
+  // Decorative element (Glassmorphism circle)
+  ctx.globalAlpha = 0.05;
+  ctx.fillStyle = COLORS.accent;
+  ctx.beginPath();
+  ctx.arc(width - 50, 50, 250, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#5865F2';
-  ctx.lineWidth = 4;
+  ctx.globalAlpha = 1.0;
+
+  // Main Card Area
+  ctx.fillStyle = 'rgba(26, 29, 46, 0.9)';
+  ctx.beginPath();
+  ctx.roundRect(40, 40, width - 80, height - 80, 25);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(114, 137, 218, 0.4)';
+  ctx.lineWidth = 2;
   ctx.stroke();
 
-
-  // Avatar
+  // Avatar with glow
   const avatarURL = user.displayAvatarURL({ extension: 'png', size: 256 });
   const avatar = await loadImage(avatarURL);
-  drawRoundedImage(ctx, avatar, 50, 75, 150, 150, 30);
   
-  // Status indicator
-  const statusColor = {
-    online: '#43B581',
-    idle: '#FAA61A',
-    dnd: '#F04747',
-    offline: '#747F8D'
-  };
-  const status = member?.presence?.status || 'offline';
-  ctx.fillStyle = statusColor[status];
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+  drawRoundedImage(ctx, avatar, 80, 80, 160, 160, 40);
+  ctx.shadowBlur = 0;
+
+  // Status Indicator
+  const statusLine = member?.presence?.status || 'offline';
+  ctx.fillStyle = COLORS[statusLine] || COLORS.offline;
   ctx.beginPath();
-  ctx.arc(175, 200, 20, 0, Math.PI * 2, true);
+  ctx.arc(215, 215, 18, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#1c1e21';
-  ctx.lineWidth = 5;
+  ctx.strokeStyle = COLORS.cardBg;
+  ctx.lineWidth = 6;
   ctx.stroke();
 
-
-  // Username
-  ctx.font = 'bold 36px Helvetica, Arial, sans-serif';
+  // Typography
+  ctx.textAlign = 'left';
+  
+  // Name & Level Badge
+  ctx.font = 'bold 42px sans-serif';
+  ctx.fillStyle = COLORS.text;
+  ctx.fillText(member.displayName || user.username, 280, 110);
+  
+  // Level Badge
+  const levelText = `LEVEL ${levelData?.level || 1}`;
+  ctx.font = 'bold 20px sans-serif';
+  const levelWidth = ctx.measureText(levelText).width;
+  ctx.fillStyle = COLORS.accent;
+  ctx.roundRect(280, 130, levelWidth + 20, 35, 8);
+  ctx.fill();
   ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(member.displayName || user.username, 240, 100);
+  ctx.fillText(levelText, 290, 155);
 
-  // About me
-  ctx.font = FONT_FAMILY_REGULAR;
-  ctx.fillStyle = '#B9BBBE';
-  ctx.fillText('About Me:', 240, 150);
-  wrapText(ctx, userData?.about || 'No information set yet.', 240, 180, 500, 25);
+  // XP Progress Bar
+  const xp = levelData?.xp || 0;
+  const level = levelData?.level || 1;
+  const nextXP = level * level * 100;
+  const progress = Math.min(xp / nextXP, 1);
+  
+  ctx.fillStyle = '#3E4253';
+  ctx.beginPath();
+  ctx.roundRect(280, 185, 500, 15, 10);
+  ctx.fill();
+  
+  ctx.fillStyle = COLORS.accent;
+  ctx.beginPath();
+  ctx.roundRect(280, 185, 500 * progress, 15, 10);
+  ctx.fill();
+  
+  ctx.font = '14px sans-serif';
+  ctx.fillStyle = COLORS.textSecondary;
+  ctx.fillText(`${xp} / ${nextXP} XP`, 700, 215);
 
+  // About Me Section
+  ctx.font = 'bold 18px sans-serif';
+  ctx.fillStyle = COLORS.textSecondary;
+  ctx.fillText('BIOGRAPHY', 280, 260);
+  
+  ctx.font = '20px sans-serif';
+  ctx.fillStyle = COLORS.text;
+  wrapText(ctx, userData?.about || 'No bio provided.', 280, 290, 500, 28);
 
-  // Stats
+  // Bottom Stats Row
   const studyTime = formatTime(studyData?.total_minutes);
-  const joinedDate = `<t:${Math.floor(member.joinedTimestamp / 1000)}:R>`;
+  const coins = economyData || 0;
 
-  ctx.font = FONT_FAMILY_BOLD;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('Total Study Time', 50, 300);
-  ctx.fillText('Joined Server', 400, 300);
+  const drawStat = (label, value, x) => {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = COLORS.textSecondary;
+    ctx.fillText(label, x, 400);
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText(String(value), x, 435);
+  };
 
-  ctx.font = FONT_FAMILY_REGULAR;
-  ctx.fillStyle = '#B9BBBE';
-  ctx.fillText(studyTime, 50, 340);
-  ctx.fillText(joinedDate, 400, 340);
-
+  drawStat('STUDY FOCUS', studyTime, 80);
+  drawStat('AETHER COINS', `🪙 ${coins}`, 320);
+  drawStat('MEMBERSHIP', new Date(member.joinedTimestamp).toLocaleDateString(), 560);
 
   return canvas.toBuffer();
 }
 
 async function generateStatsCard(user, stats) {
-  const width = 600;
-  const height = 300;
+  const width = 700;
+  const height = 350;
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
-  // Background
-  const gradient = ctx.createLinearGradient(0, 0, width, height);
-  gradient.addColorStop(0, '#23272A');
-  gradient.addColorStop(1, '#2C2F33');
-  ctx.fillStyle = gradient;
+  // Modern Dark Background
+  ctx.fillStyle = COLORS.bg;
   ctx.fillRect(0, 0, width, height);
-  
-  // Card
-  ctx.fillStyle = '#1c1e21';
-  ctx.roundRect(20, 20, width - 40, height - 40, 20);
+
+  // Glass Container
+  ctx.fillStyle = COLORS.cardBg;
+  ctx.beginPath();
+  ctx.roundRect(30, 30, width - 60, height - 60, 30);
   ctx.fill();
-  ctx.strokeStyle = '#5865F2';
-  ctx.lineWidth = 4;
+  
+  // Border Glow
+  const grad = ctx.createLinearGradient(0, 0, width, height);
+  grad.addColorStop(0, COLORS.accent);
+  grad.addColorStop(1, '#4E5D94');
+  ctx.strokeStyle = grad;
+  ctx.lineWidth = 3;
+  ctx.globalAlpha = 0.4;
   ctx.stroke();
+  ctx.globalAlpha = 1.0;
 
-  // Avatar
-  const avatarURL = user.displayAvatarURL({ extension: 'png', size: 128 });
-  const avatar = await loadImage(avatarURL);
-  drawRoundedImage(ctx, avatar, 40, 70, 100, 100, 20);
+  const avatar = await loadImage(user.displayAvatarURL({ extension: 'png', size: 256 }));
+  drawRoundedImage(ctx, avatar, 60, 60, 140, 140, 35);
 
+  ctx.font = 'bold 34px sans-serif';
+  ctx.fillStyle = COLORS.text;
+  ctx.fillText(user.username, 230, 100);
 
-  // Username
-  ctx.font = 'bold 32px Helvetica, Arial, sans-serif';
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText(user.username, 160, 90);
+  ctx.font = '20px sans-serif';
+  ctx.fillStyle = COLORS.textSecondary;
+  ctx.fillText('Personal Productivity Stats', 230, 130);
 
-  // Total Time
-  ctx.font = FONT_FAMILY_BOLD;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('Total Study Time', 160, 150);
-  ctx.font = FONT_FAMILY_REGULAR;
-  ctx.fillStyle = '#B9BBBE';
-  ctx.fillText(formatTime(stats?.total_minutes), 160, 180);
+  // Stats Grid
+  const drawMetric = (label, val, x, y) => {
+    ctx.font = 'bold 16px sans-serif';
+    ctx.fillStyle = COLORS.accent;
+    ctx.fillText(label.toUpperCase(), x, y);
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText(val, x, y + 35);
+  };
 
-  // Last Updated
-  ctx.font = FONT_FAMILY_BOLD;
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillText('Last Session', 160, 230);
-  ctx.font = FONT_FAMILY_REGULAR;
-  ctx.fillStyle = '#B9BBBE';
-  ctx.fillText(
-    stats?.last_update ? new Date(stats.last_update).toLocaleString() : 'Never',
-    160,
-    260
-  );
+  drawMetric('Total Focus Time', formatTime(stats?.total_minutes), 230, 190);
+  drawMetric('Last Active', stats?.last_update ? new Date(stats.last_update).toLocaleDateString() : 'None', 480, 190);
 
   return canvas.toBuffer();
 }
 
-module.exports = { generateProfileCard, generateStatsCard }; 
+async function generateLeaderboardCard(guild, topUsers, client) {
+  const width = 900;
+  const height = 600;
+  const canvas = createCanvas(width, height);
+  const ctx = canvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = COLORS.bg;
+  ctx.fillRect(0, 0, width, height);
+
+  // Header Area
+  ctx.fillStyle = COLORS.accent;
+  ctx.fillRect(0, 0, width, 120);
+  
+  ctx.font = 'bold 42px sans-serif';
+  ctx.fillStyle = '#FFFFFF';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${guild.name} Leaderboard`, width / 2, 75);
+
+  // Leaderboard entries
+  ctx.textAlign = 'left';
+  let yPos = 180;
+  
+  for (let i = 0; i < topUsers.length; i++) {
+    const data = topUsers[i];
+    const user = await client.users.fetch(data.user_id).catch(() => null);
+    const name = user ? user.username : `User ${data.user_id}`;
+    
+    // Alt row background
+    if (i % 2 === 0) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+      ctx.fillRect(40, yPos - 35, width - 80, 50);
+    }
+
+    // Rank
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = i < 3 ? COLORS.idle : COLORS.textSecondary;
+    ctx.fillText(`#${i + 1}`, 60, yPos);
+
+    // Name
+    ctx.font = 'bold 24px sans-serif';
+    ctx.fillStyle = COLORS.text;
+    ctx.fillText(name, 150, yPos);
+
+    // Time
+    ctx.textAlign = 'right';
+    ctx.font = '22px sans-serif';
+    ctx.fillStyle = COLORS.accent;
+    ctx.fillText(formatTime(data.total_minutes), width - 100, yPos);
+    ctx.textAlign = 'left';
+
+    yPos += 45;
+  }
+
+  return canvas.toBuffer();
+}
+
+module.exports = { generateProfileCard, generateStatsCard, generateLeaderboardCard };
+ 

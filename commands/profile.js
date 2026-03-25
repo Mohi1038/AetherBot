@@ -1,6 +1,8 @@
 const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
 const User = require('../models/User');
 const StudyTime = require('../models/StudyTime');
+const Levels = require('../models/Levels');
+const Economy = require('../models/Economy');
 const { generateProfileCard } = require('../utils/cardGenerator');
 
 module.exports = {
@@ -33,11 +35,13 @@ module.exports = {
     if (subcommand === 'view') {
       const user = interaction.options.getUser('user') || interaction.user;
       const member = interaction.guild.members.cache.get(user.id);
-      const [userData, studyData] = await Promise.all([
+      const [userData, studyData, levelData, economyData] = await Promise.all([
         User.get(user.id, interaction.guild.id),
-        StudyTime.get(user.id, interaction.guild.id)
+        StudyTime.get(user.id, interaction.guild.id),
+        Levels.get(user.id, interaction.guild.id),
+        Economy.getBalance(user.id, interaction.guild.id)
       ]);
-      const imageBuffer = await generateProfileCard(user, member, userData, studyData);
+      const imageBuffer = await generateProfileCard(user, member, userData, studyData, levelData, economyData);
       const attachment = new AttachmentBuilder(imageBuffer, { name: 'profile-card.png' });
       await interaction.reply({ files: [attachment] });
     } else if (subcommand === 'edit') {

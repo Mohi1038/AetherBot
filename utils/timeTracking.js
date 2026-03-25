@@ -1,4 +1,6 @@
 const { updateTime } = require('../models/StudyTime');
+const Levels = require('../models/Levels');
+const Economy = require('../models/Economy');
 
 class TimeTracker {
   constructor() {
@@ -48,8 +50,16 @@ class TimeTracker {
   }
 
   async updateSession(member, minutes, isFinal = false) {
+    if (minutes <= 0) return true;
     try {
       await updateTime(member.id, member.guild.id, minutes);
+      
+      // Reward XP and Coins: 10 XP and 2 Coins per minute
+      const xpReward = minutes * 10;
+      const coinReward = minutes * 2;
+      
+      await Levels.addXP(member.id, member.guild.id, xpReward);
+      await Economy.addCoins(member.id, member.guild.id, coinReward);
       const key = `${member.guild.id}-${member.id}`;
       
       if (this.sessions.has(key)) {

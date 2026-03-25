@@ -1,0 +1,11 @@
+[INFO] Successfully loaded command: economy
+[INFO] Successfully loaded command: leaderboard
+[INFO] Successfully loaded command: profile
+[INFO] Successfully loaded command: reminder
+[INFO] Successfully loaded command: stats
+[INFO] Successfully loaded command: todo
+🕒 TimeTracker initialized
+✅ StudyTime DB connection verified
+✅ Successfully connected to Supabase PostgreSQL database!
+✅ Bot is logging in...
+✅ Logged in as AetherBot#2407
