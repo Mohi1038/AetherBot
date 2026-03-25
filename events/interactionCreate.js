@@ -12,18 +12,24 @@ module.exports = {
     } catch (error) {
       console.error(`Error executing ${interaction.commandName}`, error);
       
-      // Check if interaction has already been replied to
-      if (!interaction.replied && !interaction.deferred) {
-        await interaction.reply({
-          content: 'There was an error while executing this command!',
-          flags: 64 // 64 = ephemeral flag
-        });
-      } else {
-        // If already replied, try to follow up
-        await interaction.followUp({
-          content: 'There was an error while executing this command!',
-          flags: 64
-        });
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: 'There was an error while executing this command!',
+            flags: 64
+          });
+        } else if (interaction.deferred) {
+          await interaction.editReply({
+            content: 'There was an error while executing this command!'
+          });
+        } else {
+          await interaction.followUp({
+            content: 'There was an error while executing this command!',
+            flags: 64
+          });
+        }
+      } catch (err) {
+        console.error('Failed to send error response:', err.message);
       }
     }
   }

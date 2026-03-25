@@ -33,17 +33,24 @@ module.exports = {
     const subcommand = interaction.options.getSubcommand();
     
     if (subcommand === 'view') {
+      await interaction.deferReply();
       const user = interaction.options.getUser('user') || interaction.user;
-      const member = interaction.guild.members.cache.get(user.id);
-      const [userData, studyData, levelData, economyData] = await Promise.all([
-        User.get(user.id, interaction.guild.id),
-        StudyTime.get(user.id, interaction.guild.id),
-        Levels.get(user.id, interaction.guild.id),
-        Economy.getBalance(user.id, interaction.guild.id)
-      ]);
-      const imageBuffer = await generateProfileCard(user, member, userData, studyData, levelData, economyData);
-      const attachment = new AttachmentBuilder(imageBuffer, { name: 'profile-card.png' });
-      await interaction.reply({ files: [attachment] });
+      const member = await interaction.guild.members.fetch(user.id).catch(() => null);
+      
+      try {
+        const [userData, studyData, levelData, economyData] = await Promise.all([
+          User.get(user.id, interaction.guild.id),
+          StudyTime.get(user.id, interaction.guild.id),
+          Levels.get(user.id, interaction.guild.id),
+          Economy.getBalance(user.id, interaction.guild.id)
+        ]);
+        const imageBuffer = await generateProfileCard(user, member, userData, studyData, levelData, economyData);
+        const attachment = new AttachmentBuilder(imageBuffer, { name: 'profile-card.png' });
+        await interaction.editReply({ files: [attachment] });
+      } catch (err) {
+        console.error('Profile view error:', err);
+        await interaction.editReply({ content: '❌ Failed to load profile.', flags: 64 });
+      }
     } else if (subcommand === 'edit') {
       const about = interaction.options.getString('about');
       await User.update(interaction.user.id, interaction.guild.id, { about });

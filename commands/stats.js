@@ -15,10 +15,11 @@ module.exports = {
   async execute(interaction) {
     const targetUser = interaction.options.getUser('user') || interaction.user;
     try {
+      await interaction.deferReply();
       const stats = await get(targetUser.id, interaction.guild.id);
       const imageBuffer = await generateStatsCard(targetUser, stats);
       const attachment = new AttachmentBuilder(imageBuffer, { name: 'stats-card.png' });
-      await interaction.reply({ files: [attachment] });
+      await interaction.editReply({ files: [attachment] });
     } catch (error) {
       console.error('Stats command failed:', error);
       await interaction.reply({
